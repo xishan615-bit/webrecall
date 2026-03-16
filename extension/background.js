@@ -274,6 +274,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getStats().then(sendResponse);
     return true;
   }
+
+  // ── Native Messaging 中继（MV3 popup 不能直接调 NM，必须经 background）──
+  if (message.type === "NATIVE_MESSAGE") {
+    const NM_HOST = "com.webrecall.native";
+    try {
+      chrome.runtime.sendNativeMessage(NM_HOST, { action: message.action }, (resp) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          sendResponse({ ok: false, running: false, message: err.message });
+        } else {
+          sendResponse(resp || { ok: false, running: false, message: "无响应" });
+        }
+      });
+    } catch (e) {
+      sendResponse({ ok: false, running: false, message: e.message });
+    }
+    return true; // 保持 sendResponse 通道开放（异步）
+  }
 });
 
 // ── Lite Server API 调用（降级到 chrome.storage）─────────────

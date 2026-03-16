@@ -95,9 +95,10 @@ document.getElementById("btn-refresh-library").addEventListener("click", loadLib
 const NM_HOST = "com.webrecall.native";
 
 function sendNativeMessage(action) {
+  // MV3 popup 不能直接调 sendNativeMessage，必须通过 background service worker 中转
   return new Promise((resolve) => {
     try {
-      chrome.runtime.sendNativeMessage(NM_HOST, { action }, (resp) => {
+      chrome.runtime.sendMessage({ type: "NATIVE_MESSAGE", action }, (resp) => {
         const err = chrome.runtime.lastError;
         if (err) {
           console.warn(`[WebRecall] NM ${action} error:`, err.message);
