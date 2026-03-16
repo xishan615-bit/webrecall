@@ -130,29 +130,29 @@ btnLite.addEventListener("click", async () => {
   liteHint.textContent = "";
   liteHint.className   = "lite-hint";
 
-  if (liteOnline) {
-    // ── 关闭 ──────────────────────────────────────────────
+  // 实时检查当前状态（不依赖可能过期的 liteOnline 变量）
+  const currentlyRunning = await _checkHealth();
+  console.log("[WebRecall] btn click, currentlyRunning=", currentlyRunning);
+
+  if (currentlyRunning) {
+    // ── 关闭 ────────────────────────────────────────────────
     btnLite.textContent = "关闭中...";
 
-    // ① 先尝试 Native Messaging Host
+    // ① NM stop
     const nmResult = await sendNativeMessage("stop");
-    let stopped = nmResult.ok && !nmResult.running;
+    console.log("[WebRecall] NM stop result:", nmResult);
 
-    // ② NM 失败时，直接 HTTP /shutdown 兜底
-    if (!stopped) {
-      console.warn("[WebRecall] NM stop failed, fallback to HTTP /shutdown");
-      try {
-        await fetch(`${LITE_URL}/shutdown`, {
-          method: "POST",
-          signal: AbortSignal.timeout(3000),
-        });
-        stopped = true;
-      } catch (e) {
-        console.warn("[WebRecall] HTTP /shutdown failed:", e.message);
-      }
+    // ② 无论 NM 是否成功，都尝试 HTTP /shutdown 兜底
+    try {
+      await fetch(`${LITE_URL}/shutdown`, {
+        method: "POST",
+        signal: AbortSignal.timeout(3000),
+      });
+    } catch (e) {
+      console.warn("[WebRecall] HTTP /shutdown:", e.message);
     }
 
-    // ③ 等 1.5s 后 health check 确认真实状态
+    // ③ 等 1.5s 后确认
     await _sleep(1500);
     liteOnline = await _checkHealth();
 
@@ -162,14 +162,13 @@ btnLite.addEventListener("click", async () => {
     }
 
   } else {
-    // ── 启动 ──────────────────────────────────────────────
+    // ── 启动 ────────────────────────────────────────────────
     btnLite.textContent = "启动中...";
 
-    // ① 发送启动指令给 NM Host
     const nmResult = await sendNativeMessage("start");
     console.log("[WebRecall] NM start result:", nmResult);
 
-    // ② 不管 NM 是否成功，等 3s 后直接 health check 确认
+    // 等 3s 后 health check 确认
     await _sleep(3000);
     liteOnline = await _checkHealth();
 
