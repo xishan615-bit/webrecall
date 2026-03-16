@@ -75,7 +75,7 @@ def init_sqlite():
 
 def save_page(*, url: str, title: str, domain: str, platform: str,
               content: str, saved_at: str, saved_at_ts: float,
-              summary: str = None):
+              summary: str = ""):
     conn = _get_conn()
     conn.execute("""
         INSERT INTO pages (url, title, domain, platform, content, summary, saved_at, saved_at_ts)
