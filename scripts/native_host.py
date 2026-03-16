@@ -27,9 +27,19 @@ BACKEND_DIR = os.path.join(PROJECT_DIR, "backend")
 LITE_SERVER = os.path.join(BACKEND_DIR, "lite_server.py")
 PID_FILE    = os.path.join(BACKEND_DIR, ".lite_server.pid")
 VENV_PYTHON = os.path.join(BACKEND_DIR, "venv", "bin", "python3")
+LOG_FILE    = os.path.expanduser("~/.webrecall/native_host.log")
 
-# 优先使用 venv python，fallback 到系统 python3
-PYTHON = VENV_PYTHON if os.path.exists(VENV_PYTHON) else sys.executable
+# 优先使用 venv python，否则按优先级尝试系统绝对路径（避免 Chrome sandbox strip PATH）
+def _find_python():
+    if os.path.exists(VENV_PYTHON):
+        return VENV_PYTHON
+    for p in ["/usr/bin/python3", "/usr/local/bin/python3",
+              "/opt/homebrew/bin/python3", sys.executable]:
+        if os.path.exists(p):
+            return p
+    return sys.executable
+
+PYTHON = _find_python()
 
 
 # ── Native Messaging I/O ───────────────────────────────────────
@@ -50,6 +60,17 @@ def send_message(obj):
     sys.stdout.buffer.write(struct.pack("<I", len(data)))
     sys.stdout.buffer.write(data)
     sys.stdout.buffer.flush()
+
+
+def _log(msg):
+    """写入调试日志到 ~/.webrecall/native_host.log"""
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            from datetime import datetime
+            f.write(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}\n")
+    except Exception:
+        pass
 
 
 # ── Lite Server 进程控制 ───────────────────────────────────────
@@ -89,11 +110,14 @@ def is_running() -> bool:
 
 def start_server() -> dict:
     if is_running():
+        _log("start_server: already running")
         return {"ok": True, "running": True, "message": "已在运行"}
 
     if not os.path.exists(LITE_SERVER):
+        _log(f"start_server: lite_server.py not found at {LITE_SERVER}")
         return {"ok": False, "running": False, "message": f"找不到 lite_server.py：{LITE_SERVER}"}
 
+    _log(f"start_server: python={PYTHON} server={LITE_SERVER}")
     try:
         proc = subprocess.Popen(
             [PYTHON, LITE_SERVER],
@@ -108,9 +132,12 @@ def start_server() -> dict:
         for _ in range(6):
             time.sleep(0.5)
             if _process_alive(proc.pid):
+                _log(f"start_server: success pid={proc.pid}")
                 return {"ok": True, "running": True, "message": "启动成功"}
+        _log("start_server: process exited immediately")
         return {"ok": False, "running": False, "message": "进程启动后立即退出，请检查依赖是否安装"}
     except Exception as e:
+        _log(f"start_server: exception {e}")
         return {"ok": False, "running": False, "message": str(e)}
 
 
@@ -142,29 +169,38 @@ def stop_server() -> dict:
 # ── 主循环 ────────────────────────────────────────────────────
 
 def main():
+    _log(f"native_host started: python={PYTHON} backend={BACKEND_DIR}")
     while True:
         msg = read_message()
         if msg is None:
+            _log("read_message returned None, exiting")
             break
 
         action = msg.get("action", "")
+        _log(f"action={action}")
 
         if action == "status":
             running = is_running()
-            send_message({"ok": True, "running": running,
-                          "message": "运行中" if running else "已停止"})
+            resp = {"ok": True, "running": running,
+                    "message": "运行中" if running else "已停止"}
+            _log(f"status resp: {resp}")
+            send_message(resp)
 
         elif action == "start":
             result = start_server()
+            _log(f"start resp: {result}")
             send_message(result)
 
         elif action == "stop":
             result = stop_server()
+            _log(f"stop resp: {result}")
             send_message(result)
 
         else:
-            send_message({"ok": False, "running": is_running(),
-                          "message": f"未知指令：{action}"})
+            resp = {"ok": False, "running": is_running(),
+                    "message": f"未知指令：{action}"}
+            _log(f"unknown action resp: {resp}")
+            send_message(resp)
 
 
 if __name__ == "__main__":

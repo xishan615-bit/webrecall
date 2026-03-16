@@ -98,42 +98,87 @@ function sendNativeMessage(action) {
   return new Promise((resolve) => {
     try {
       chrome.runtime.sendNativeMessage(NM_HOST, { action }, (resp) => {
-        if (chrome.runtime.lastError) {
-          resolve({ ok: false, running: false, message: chrome.runtime.lastError.message });
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.warn(`[WebRecall] NM ${action} error:`, err.message);
+          resolve({ ok: false, running: false, message: err.message });
         } else {
+          console.log(`[WebRecall] NM ${action} response:`, resp);
           resolve(resp || { ok: false, running: false, message: "无响应" });
         }
       });
     } catch (e) {
+      console.warn(`[WebRecall] NM ${action} exception:`, e.message);
       resolve({ ok: false, running: false, message: e.message });
     }
   });
 }
 
+/** 直接 HTTP 健康检查 Lite Server 是否在线 */
+async function _checkHealth() {
+  try {
+    const resp = await fetch(`${LITE_URL}/health`, { signal: AbortSignal.timeout(2000) });
+    return resp.ok;
+  } catch { return false; }
+}
+
+function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 btnLite.addEventListener("click", async () => {
   btnLite.disabled = true;
+  liteHint.textContent = "";
+  liteHint.className   = "lite-hint";
 
   if (liteOnline) {
-    // 关闭
+    // ── 关闭 ──────────────────────────────────────────────
     btnLite.textContent = "关闭中...";
-    const result = await sendNativeMessage("stop");
-    liteOnline = !result.ok || result.running ? liteOnline : false;
-    if (!result.ok) {
-      liteHint.textContent = `❌ ${result.message}`;
+
+    // ① 先尝试 Native Messaging Host
+    const nmResult = await sendNativeMessage("stop");
+    let stopped = nmResult.ok && !nmResult.running;
+
+    // ② NM 失败时，直接 HTTP /shutdown 兜底
+    if (!stopped) {
+      console.warn("[WebRecall] NM stop failed, fallback to HTTP /shutdown");
+      try {
+        await fetch(`${LITE_URL}/shutdown`, {
+          method: "POST",
+          signal: AbortSignal.timeout(3000),
+        });
+        stopped = true;
+      } catch (e) {
+        console.warn("[WebRecall] HTTP /shutdown failed:", e.message);
+      }
+    }
+
+    // ③ 等 1.5s 后 health check 确认真实状态
+    await _sleep(1500);
+    liteOnline = await _checkHealth();
+
+    if (liteOnline) {
+      liteHint.textContent = "❌ 关闭失败，请在终端手动停止";
       liteHint.className   = "lite-hint warn";
     }
+
   } else {
-    // 启动
+    // ── 启动 ──────────────────────────────────────────────
     btnLite.textContent = "启动中...";
-    const result = await sendNativeMessage("start");
-    if (result.ok && result.running) {
-      liteOnline = true;
-      liteHint.textContent = "";
-    } else {
-      liteHint.textContent = `❌ ${result.message || "启动失败"}`;
+
+    // ① 发送启动指令给 NM Host
+    const nmResult = await sendNativeMessage("start");
+    console.log("[WebRecall] NM start result:", nmResult);
+
+    // ② 不管 NM 是否成功，等 3s 后直接 health check 确认
+    await _sleep(3000);
+    liteOnline = await _checkHealth();
+
+    if (!liteOnline) {
+      const reason = nmResult.message || "请在终端手动运行 python lite_server.py";
+      liteHint.textContent = `❌ 启动失败：${reason}`;
       liteHint.className   = "lite-hint warn";
     }
   }
+
   applyMode();
 });
 

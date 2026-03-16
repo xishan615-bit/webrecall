@@ -13,9 +13,10 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-HOST_SCRIPT="$SCRIPT_DIR/native_host.py"
-HOST_MANIFEST_TEMPLATE="$SCRIPT_DIR/com.webrecall.native.json"
+PROJECT_DIR="$SCRIPT_DIR"
+SCRIPTS_DIR="$SCRIPT_DIR/scripts"
+HOST_SCRIPT="$SCRIPTS_DIR/native_host.py"
+HOST_MANIFEST_TEMPLATE="$SCRIPTS_DIR/com.webrecall.native.json"
 HOST_NAME="com.webrecall.native"
 
 # ── 参数处理 ────────────────────────────────────────────────────
