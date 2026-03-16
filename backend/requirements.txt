@@ -1,0 +1,8 @@
+# Lite Server only — 无 Ollama / ChromaDB 依赖
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+beautifulsoup4==4.12.3
+readability-lxml==0.8.1
+lxml_html_clean
+jieba==0.42.1
+bm25s==0.1.10

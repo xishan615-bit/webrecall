@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 环境变量（含密钥，不提交）
+.env
+!.env.example
+
+# 数据库 / 向量库（用户数据，不提交）
+backend/chroma_data/
+*.db
+*.sqlite
+*.sqlite3
+*.pid
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# 日志
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node（如有）
+node_modules/

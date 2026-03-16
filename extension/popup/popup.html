@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebRecall</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <span class="logo">🦞 WebRecall</span>
+      <div class="header-right">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">检测中...</span>
+      </div>
+    </header>
+
+    <!-- 保存按钮（始终可用） -->
+    <div class="save-section">
+      <button class="btn-save" id="btn-save">
+        <span class="btn-icon">💾</span>
+        <span id="save-label">保存当前页面</span>
+      </button>
+      <div class="save-feedback" id="save-feedback"></div>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="tabs">
+      <button class="tab active" id="tab-search" data-tab="search">🔍 搜索</button>
+      <button class="tab" id="tab-library" data-tab="library">📚 库</button>
+      <button class="tab" id="tab-guide" data-tab="guide">📖 用法</button>
+    </div>
+
+    <!-- 搜索面板 -->
+    <div class="panel" id="panel-search">
+      <div class="search-row">
+        <input
+          type="text"
+          class="search-input"
+          id="search-input"
+          placeholder="描述你想找的页面..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="search-tip">用 <kbd>+</kbd> 联合检索，如 <code>AI+RAG</code> · 支持标题和标签匹配</div>
+      <div class="search-results" id="search-results">
+        <div class="search-hint">输入关键词，实时显示相关页面</div>
+      </div>
+    </div>
+
+    <!-- 库管理面板 -->
+    <div class="panel" id="panel-library" style="display:none">
+      <div class="library-header">
+        <div class="lib-tabs">
+          <button class="lib-tab active" id="lib-tab-pending">待整理</button>
+          <button class="lib-tab" id="lib-tab-done">已整理</button>
+        </div>
+        <div class="library-header-right">
+          <span id="library-count"></span>
+          <button class="btn-refresh" id="btn-refresh-library">↻</button>
+        </div>
+      </div>
+      <div class="library-list" id="library-list">
+        <div class="search-hint">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 用法面板 -->
+    <div class="panel settings-panel" id="panel-guide" style="display:none">
+
+      <!-- 运行状态 -->
+      <div class="settings-block">
+        <div class="settings-section-title">运行状态</div>
+        <div class="status-card" id="status-card">
+          <div class="status-card-icon" id="status-card-icon">⏳</div>
+          <div class="status-card-text">
+            <div class="status-card-title" id="status-card-title">检测中...</div>
+            <div class="status-card-desc" id="status-card-desc">正在检测服务状态</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lite Server 控制 -->
+      <div class="settings-block">
+        <div class="settings-section-title">Lite Server（推荐）</div>
+        <div class="lite-control">
+          <div class="lite-control-left">
+            <span class="lite-dot" id="lite-dot"></span>
+            <span class="lite-label" id="lite-label">检测中...</span>
+          </div>
+          <button class="btn-lite" id="btn-lite" disabled>...</button>
+        </div>
+        <div class="lite-hint" id="lite-hint"></div>
+      </div>
+
+      <!-- 使用说明 -->
+      <div class="settings-block">
+        <div class="settings-section-title">三步上手</div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <span class="guide-step-num">1</span>
+            <div class="guide-step-body">
+              <div class="guide-step-title">随手保存</div>
+              <div class="guide-step-desc">浏览时点 💾，页面内容写入本地</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <span class="guide-step-num">2</span>
+            <div class="guide-step-body">
+              <div class="guide-step-title">关键词搜索</div>
+              <div class="guide-step-desc">在 🔍 输入词，实时找到保存过的页面</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <span class="guide-step-num">3</span>
+            <div class="guide-step-body">
+              <div class="guide-step-title">AI 外脑检索</div>
+              <div class="guide-step-desc">配置 MCP，让 AI 助手直接调用你的收藏库</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 存储模式说明 -->
+      <div class="settings-block">
+        <div class="settings-section-title">存储模式</div>
+        <div class="settings-tip">
+          <div class="tip-row">
+            <span class="tip-icon">🔵</span>
+            <span><b>本地模式</b> — 数据存在浏览器，零配置</span>
+          </div>
+          <div class="tip-row">
+            <span class="tip-icon">🟡</span>
+            <span><b>强化模式</b> — Lite Server 写入 SQLite，支持 MCP 检索</span>
+          </div>
+          <div class="tip-row">
+            <span class="tip-icon">🟢</span>
+            <span><b>完整模式</b> — 完整后端，语义搜索（即将支持）</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
