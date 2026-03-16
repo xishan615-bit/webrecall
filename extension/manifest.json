@@ -28,7 +28,8 @@
     "activeTab",
     "tabs",
     "storage",
-    "scripting"
+    "scripting",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "http://localhost:8001/*",

@@ -1,0 +1,9 @@
+{
+  "name": "com.webrecall.native",
+  "description": "WebRecall Native Messaging Host — controls lite_server.py lifecycle",
+  "path": "__PLACEHOLDER__",
+  "type": "stdio",
+  "allowed_origins": [
+    "__EXTENSION_ID__"
+  ]
+}
