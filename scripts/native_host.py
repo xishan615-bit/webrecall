@@ -141,29 +141,59 @@ def start_server() -> dict:
         return {"ok": False, "running": False, "message": str(e)}
 
 
+def _kill_by_port(port: int = 8001) -> bool:
+    """使用 lsof 查找并 kill 占用指定端口的进程，作为 PID 文件的 fallback。"""
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True, text=True
+        )
+        pids = [int(p.strip()) for p in result.stdout.strip().splitlines() if p.strip().isdigit()]
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except Exception:
+                pass
+        return bool(pids)
+    except Exception:
+        return False
+
+
 def stop_server() -> dict:
     pid = _read_pid()
-    if not pid or not _process_alive(pid):
+    if pid and _process_alive(pid):
+        # PID 文件有效：精确 kill
+        try:
+            os.kill(pid, signal.SIGTERM)
+            for _ in range(6):
+                time.sleep(0.5)
+                if not _process_alive(pid):
+                    if os.path.exists(PID_FILE):
+                        os.remove(PID_FILE)
+                    _log(f"stop_server: stopped pid={pid}")
+                    return {"ok": True, "running": False, "message": "已停止"}
+            # 强杀
+            os.kill(pid, signal.SIGKILL)
+            if os.path.exists(PID_FILE):
+                os.remove(PID_FILE)
+            _log(f"stop_server: force-killed pid={pid}")
+            return {"ok": True, "running": False, "message": "已强制停止"}
+        except Exception as e:
+            _log(f"stop_server: exception killing pid={pid}: {e}")
+            return {"ok": False, "running": True, "message": str(e)}
+    else:
+        # PID 文件无效/缺失 → fallback：按端口 kill
+        _log("stop_server: PID file invalid, fallback to port-based kill")
         if os.path.exists(PID_FILE):
             os.remove(PID_FILE)
-        return {"ok": True, "running": False, "message": "服务未运行"}
-
-    try:
-        os.kill(pid, signal.SIGTERM)
-        # 等待最多 3 秒
-        for _ in range(6):
-            time.sleep(0.5)
-            if not _process_alive(pid):
-                if os.path.exists(PID_FILE):
-                    os.remove(PID_FILE)
-                return {"ok": True, "running": False, "message": "已停止"}
-        # 强杀
-        os.kill(pid, signal.SIGKILL)
-        if os.path.exists(PID_FILE):
-            os.remove(PID_FILE)
-        return {"ok": True, "running": False, "message": "已强制停止"}
-    except Exception as e:
-        return {"ok": False, "running": True, "message": str(e)}
+        killed = _kill_by_port(8001)
+        if killed:
+            time.sleep(1.0)
+            _log("stop_server: killed by port")
+            return {"ok": True, "running": False, "message": "已停止"}
+        else:
+            _log("stop_server: no process found on port 8001")
+            return {"ok": True, "running": False, "message": "服务未运行"}
 
 
 # ── 主循环 ────────────────────────────────────────────────────
